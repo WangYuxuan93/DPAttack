@@ -6,8 +6,8 @@ from tabulate import tabulate
 Sentence = namedtuple(typename='Sentence',
                       field_names=['ID', 'FORM', 'LEMMA', 'CPOS',
                                    'POS', 'FEATS', 'HEAD', 'DEPREL',
-                                   'PHEAD', 'PDEPREL'],
-                      defaults=[None]*10)
+                                   'PHEAD', 'PDEPREL'])
+                      #,defaults=[None]*10)
 
 
 def sent_print(sent: Sentence, format='table'):
