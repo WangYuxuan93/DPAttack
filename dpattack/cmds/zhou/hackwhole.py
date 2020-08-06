@@ -27,11 +27,12 @@ from dpattack.utils.vocab import Vocab
 
 from .ihack import IHack
 from .hack_util import v, HACK_TAGS, young_select, elder_select
-
+import warnings
 
 class HackWhole(IHack):
 
     def __call__(self, config):
+        warnings.simplefilter("error")
         self.init_logger(config)
         self.setup(config)
 
@@ -102,9 +103,9 @@ class HackWhole(IHack):
     def hack(self, instance):
         words, tags, chars, arcs, rels = instance
         _, raw_metric = self.task.evaluate([(words, tags, chars, arcs, rels)],
-                                           mst=self.config.hkw_mst == 'on')
+                                           mst=self.config.hk_mst == 'on')
         _, raw_arcs, _ = self.task.predict(
-            [(words, tags, None)], mst=self.config.hkw_mst == 'on')
+            [(words, tags, None)], mst=self.config.hk_mst == 'on')
 
         # Setup some states before attacking a sentence
         # WARNING: Operations on variables n__global_ramambc__" passed to a function
@@ -112,12 +113,12 @@ class HackWhole(IHack):
         forbidden_idxs__ = [self.vocab.unk_index, self.vocab.pad_index]
         change_positions__ = set()
         orphans__ = set()
-        if self.config.hkw_max_change > 0.9999:
-            max_change_num = int(self.config.hkw_max_change)
+        if self.config.hk_max_change > 0.9999:
+            max_change_num = int(self.config.hk_max_change)
         else:
             max_change_num = max(
-                1, int(self.config.hkw_max_change * words.size(1)))
-        iter_change_num = min(max_change_num, self.config.hkw_iter_change)
+                1, int(self.config.hk_max_change * words.size(1)))
+        iter_change_num = min(max_change_num, self.config.hk_iter_change)
 
         var_words = words.clone()
         raw_words = words.clone()
@@ -131,7 +132,7 @@ class HackWhole(IHack):
             "num_changed": 0,
             "logtable": 'No modification'
         })
-        for iter_id in range(1, self.config.hkw_steps):
+        for iter_id in range(1, self.config.hk_steps):
             result = self.single_hack(
                 var_words, tags, arcs, rels,
                 raw_words=raw_words, raw_metric=raw_metric, raw_arcs=raw_arcs,
@@ -155,7 +156,7 @@ class HackWhole(IHack):
                     "logtable": result['logtable'],
                     "num_changed": len(change_positions__)
                 })
-                if result['attack_metric'].uas < raw_metric.uas - self.config.hkw_eps:
+                if result['attack_metric'].uas < raw_metric.uas - self.config.hk_eps:
                     log('Succeed in step {}'.format(iter_id))
                     break
             var_words = result['words']
@@ -186,9 +187,9 @@ class HackWhole(IHack):
 
         if loss_based_on == 'logit':
             # max margin loss
-            msk_gold_arc = idx_to_msk(gold_arcs, num_classes=s_arc.size(1))
+            msk_gold_arc = idx_to_msk(gold_arcs, num_classes=s_arc.size(1)).bool()
             s_gold = s_arc[msk_gold_arc]
-            s_other = s_arc.masked_fill(msk_gold_arc, -1000.)
+            s_other = s_arc.masked_fill(msk_gold_arc.bool(), -1000.)
             max_s_other, _ = s_other.max(1)
             margin = s_gold - max_s_other
             margin[margin < -1] = -1
@@ -225,7 +226,7 @@ class HackWhole(IHack):
             Loss back-propagation
         """
         embed_grad = self.backward_loss(words, tags, arcs, rels,
-                                        loss_based_on=self.config.hkw_loss_based_on)
+                                        loss_based_on=self.config.hk_loss_based_on)
         # Sometimes the loss/grad will be zero.
         # Especially in the case of applying pgd_freq>1 to small sentences:
         # e.g., the uas of projected version may be 83.33%
@@ -241,7 +242,7 @@ class HackWhole(IHack):
         position_mask = [False for _ in range(words.size(1))]
         # Mask some positions by POS & <UNK>
         for i in range(sent_len):
-            if self.vocab.tags[tags[0][i]] not in HACK_TAGS[self.config.hkw_tag_type]:
+            if self.vocab.tags[tags[0][i]] not in HACK_TAGS[self.config.hk_tag_type]:
                 position_mask[i] = True
         # Mask some orphans
         for i in orphans__:
@@ -286,14 +287,14 @@ class HackWhole(IHack):
             # Note that it is possible that all words found are not as required, e.g.
             #   all neighbours have different tags.
             delta = word_grad / \
-                torch.norm(word_grad) * self.config.hkw_step_size
+                torch.norm(word_grad) * self.config.hk_step_size
             changed = emb_to_rpl - delta
 
             must_tag = self.vocab.tags[tags[0][word_sid].item()]
             new_word_vid, repl_info = self.find_replacement(
-                changed, must_tag, dist_measure=self.config.hkw_dist_measure,
+                changed, must_tag, dist_measure=self.config.hk_dist_measure,
                 forbidden_idxs__=forbidden_idxs__,
-                repl_method=self.config.hkw_repl_method,
+                repl_method=self.config.hk_repl_method,
                 words=words, word_sid=word_sid,
                 raw_words=raw_words
             )
@@ -309,7 +310,7 @@ class HackWhole(IHack):
                 exist_change = True
 
         if not exist_change:
-            # if self.config.hkw_selection == 'orphan':
+            # if self.config.hk_selection == 'orphan':
             #     orphans__.add(word_sids[0])
             #     log('iter {}, Add word {}\'s location to orphans.'.format(
             #         iter_id,
@@ -341,14 +342,14 @@ class HackWhole(IHack):
         # print(new_words_txt)
         loss, metric = self.task.evaluate(
             [(new_words, tags, None, arcs, rels)],
-            mst=self.config.hkw_mst == 'on')
+            mst=self.config.hk_mst == 'on')
 
         def _gen_log_table():
             new_words_text = [self.vocab.words[i.item()] for i in new_words[0]]
             raw_words_text = [self.vocab.words[i.item()] for i in raw_words[0]]
             tags_text = [self.vocab.tags[i.item()] for i in tags[0]]
             _, att_arcs, _ = self.task.predict(
-                [(new_words, tags, None)], mst=self.config.hkw_mst == 'on')
+                [(new_words, tags, None)], mst=self.config.hk_mst == 'on')
 
             table = []
             for i in range(sent_len):

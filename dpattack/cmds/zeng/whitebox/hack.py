@@ -35,7 +35,7 @@ class WhiteHack(WhiteBoxAttackBase):
         self.vals['embed_grad'] = grad_out[0]
 
     def __call__(self, config):
-        loader = self.pre_attack(config)
+        _, loader = self.pre_attack(config)
         self.parser.register_backward_hook(self.extract_embed_grad)
         # log_config('whitelog.txt',
         #            log_path=config.workspace,
@@ -60,7 +60,7 @@ class WhiteHack(WhiteBoxAttackBase):
         log('dist measure', config.hk_dist_measure)
 
         # batch size == 1
-        for sid, (words, tags, arcs, rels) in enumerate(loader):
+        for sid, (words, tags, chars, arcs, rels) in enumerate(loader):
             # if sid > 10:
             #     break
 
@@ -107,12 +107,12 @@ class WhiteHack(WhiteBoxAttackBase):
                     target_tags=['NN', 'JJ'],
                     dist_measure='enc',
                     verbose=False):
-        vocab = self.model.vocab
-        parser = self.model.model
-        loss_fn = self.model.criterion
+        vocab = self.vocab
+        parser = self.parser
+        loss_fn = self.task.criterion
         embed = parser.embed.weight
 
-        raw_loss, raw_metric = self.model.evaluate([(raw_words, tags, arcs, rels)])
+        raw_loss, raw_metric = self.task.evaluate([(raw_words, tags, arcs, rels)])
 
         # backward the loss
         parser.zero_grad()
@@ -180,8 +180,8 @@ class WhiteHack(WhiteBoxAttackBase):
             print('After Attacking: \n\t{}\n\t{}'.format(
                 " ".join(repl_words_text), " ".join(tags_text)
             ))
-        pred_tags, pred_arcs, pred_rels = self.model.predict([(repl_words, tags)])
-        loss, metric = self.model.evaluate([(repl_words, tags, arcs, rels)])
+        pred_tags, pred_arcs, pred_rels = self.task.predict([(repl_words, tags)])
+        loss, metric = self.task.evaluate([(repl_words, tags, arcs, rels)])
         table = []
         for i in range(words.size(1)):
             gold_arc = int(arcs[0][i])

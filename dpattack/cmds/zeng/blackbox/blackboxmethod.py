@@ -55,7 +55,7 @@ class Substituting(BlackBoxMethod):
         self.aug = get_blackbox_augmentor(config.blackbox_model, config.path, config.revised_rate, vocab=vocab, ftrain=config.ftrain)
         self.tag_dict = gen_tag_dict(Corpus.load(config.ftrain), vocab, 2, False)
         self.crf_tagger = CRFTagger()
-        self.crf_tagger.set_model_file(config.crf_tagger_path)
+        #self.crf_tagger.set_model_file(config.crf_tagger_path)
 
     def get_index(self, config, vocab=None, parser=None):
         if config.mode == 'augmentation':

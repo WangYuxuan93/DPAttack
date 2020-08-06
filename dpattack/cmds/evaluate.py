@@ -28,5 +28,5 @@ class Evaluate(object):
         loader = batchify(dataset, config.batch_size, config.buckets)
 
         print("Evaluate the dataset")
-        loss, metric = task.evaluate(loader, config.punct, tagger, True)
+        loss, metric = task.evaluate(loader, config.punct, tagger, config.mst)
         print(f"Loss: {loss:.4f} {metric}")

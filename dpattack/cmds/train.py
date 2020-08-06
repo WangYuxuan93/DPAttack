@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import os
+import sys
 from datetime import datetime, timedelta
 from dpattack.utils.parser_helper import init_parser, load_parser
 from dpattack.utils.metric import ParserMetric, TaggerMetric
@@ -86,7 +87,6 @@ class Train(object):
         if torch.cuda.is_available():
             model = model.cuda()
         print(f"{model}\n")
-
         total_time = timedelta()
         # best_e, best_metric = 1, TaggerMetric()
         task.optimizer = Adam(
@@ -99,7 +99,6 @@ class Train(object):
             task.optimizer,
             config.decay ** (1 / config.steps)
         )
-
         for epoch in range(1, config.epochs + 1):
             start = datetime.now()
             # train one epoch and update the parameters
@@ -127,6 +126,7 @@ class Train(object):
                 print(f"{t}s elapsed (saved)\n")
             else:
                 print(f"{t}s elapsed\n")
+            sys.stdout.flush()
             total_time += t
             if epoch - best_e >= config.patience:
                 break

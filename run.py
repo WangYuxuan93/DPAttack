@@ -3,10 +3,12 @@
 import argparse
 import os
 from dpattack.cmds import Evaluate, Predict, Train
-# from dpattack.cmds import Evaluate, Predict, Train, BlackBoxAttack, WholeSentenceAttack, SubTreeAttack, Augmentation
+from dpattack.cmds.zeng.blackbox.blackbox import BlackBoxAttack
+from dpattack.cmds.zeng.whitebox.hack import WhiteHack
+#from dpattack.cmds import Evaluate, Predict, Train, BlackBoxAttack, WholeSentenceAttack, SubTreeAttack, Augmentation
 from config import Config
 import torch
-
+import warnings
 from dpattack.cmds.zhou.hacksubtree import HackSubtree
 from dpattack.cmds.zhou.hackwhole import HackWhole
 
@@ -18,7 +20,7 @@ if __name__ == '__main__':
     parser.add_argument('--mode', default='hacksubtree',help='running mode choice')
     parser.add_argument('--conf', default='config.ini',help='the path of config file')
     args = parser.parse_args()
-
+    warnings.filterwarnings("ignore", category=UserWarning)
     subcommands = {
         'evaluate': Evaluate(),
         'predict': Predict(),
@@ -27,7 +29,8 @@ if __name__ == '__main__':
         'hackwhole': HackWhole(),
         'hacksubtree': HackSubtree(),
         # zeng
-        # 'blackbox': BlackBoxAttack(),
+        'blackbox': BlackBoxAttack(),
+        'whitebox': WhiteHack(),
         # 'subtree': SubTreeAttack(),
         # 'sentencew':WholeSentenceAttack(),
         # 'augmentation':Augmentation()

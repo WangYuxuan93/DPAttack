@@ -169,7 +169,7 @@ class IHack:
         for tag in tags:
             if tag in self.tag_dict:
                 word_idxs.extend(self.tag_dict[tag])
-        legal_tag_index = torch.tensor(word_idxs, device=tsr_device)
+        legal_tag_index = torch.tensor(word_idxs, device=tsr_device).long()
         legal_tag_mask = torch.zeros(tsr_size, device=tsr_device)\
             .index_fill_(0, legal_tag_index, 1.).byte()
         return legal_tag_mask
@@ -177,7 +177,7 @@ class IHack:
     @lru_cache(maxsize=10)
     def _gen_bert_mask(self, text, idx, tsr_device, tsr_size):
         bert_sub, _ = self.bert_aug.substitute(text, [idx], n=2000)
-        bert_sub_idxs = self.vocab.word2id(bert_sub[0]).to(tsr_device)
+        bert_sub_idxs = self.vocab.word2id(bert_sub[0]).to(tsr_device).long()
         bert_mask = torch.zeros(tsr_size, device=tsr_device)\
             .index_fill_(0, bert_sub_idxs, 1.).byte()
         return bert_mask
@@ -269,7 +269,7 @@ class IHack:
             else:
                 raise Exception
 
-            dist.masked_fill_(1 - msk, 1000.)
+            dist.masked_fill_((1 - msk).bool(), 1000.)
             for ele in forbidden_idxs__:
                 dist[ele] = 1000.
             mindist = dist.min()
